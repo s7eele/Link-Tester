@@ -43,13 +43,12 @@ def main_menu():
         with open(LINK_PATH) as f:
             for i, line in enumerate(f):
                 item = line.split('|')
-                link = item[0]
+                link = item[0].strip()
+                if not link: continue
                 try:
                     label = item[1]
                 except:
                     label = item[0]
-                if link.endswith('\n'):
-                    link = link[:-1]
                 queries = {'mode': MODES.DELETE_LINK, 'index': i}
                 menu_items.append(('Delete Link', 'RunPlugin(%s)' % (kodi.get_plugin_url(queries))),)
                 kodi.create_item({'mode': MODES.PLAY_LINK, 'link': link}, label, is_folder=False, is_playable=True, menu_items=menu_items)
