@@ -30,7 +30,7 @@ def __enum(**enums):
 
 LINK_PATH = os.path.join(xbmc.translatePath(kodi.get_profile()), 'links.txt')
 MODES = __enum(
-    MAIN='main', ADD_LINK='add_link', PLAY_LINK='play_link', DELETE_LINK='delete_link'
+    MAIN='main', ADD_LINK='add_link', PLAY_LINK='play_link', DELETE_LINK='delete_link', SETTINGS='settings'
 )
 
 url_dispatcher = URL_Dispatcher()
@@ -38,6 +38,7 @@ url_dispatcher = URL_Dispatcher()
 @url_dispatcher.register(MODES.MAIN)
 def main_menu():
     kodi.create_item({'mode': MODES.ADD_LINK}, 'Add Link')
+    kodi.create_item({'mode': MODES.SETTINGS}, 'URLResolver Settings')
     if os.path.exists(LINK_PATH):
         menu_items = []
         with open(LINK_PATH) as f:
@@ -83,6 +84,10 @@ def add_link():
                 f.write(line)
     xbmc.executebuiltin("XBMC.Container.Refresh")
 
+@url_dispatcher.register(MODES.SETTINGS)
+def urlresolver_settings():
+    urlresolver.display_settings()
+    
 @url_dispatcher.register(MODES.DELETE_LINK, ['index'])
 def delete_link(index):
     new_lines = []
