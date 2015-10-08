@@ -30,7 +30,7 @@ def __enum(**enums):
 
 LINK_PATH = os.path.join(xbmc.translatePath(kodi.get_profile()), 'links.txt')
 MODES = __enum(
-    MAIN='main', ADD_LINK='add_link', PLAY_LINK='play_link', DELETE_LINK='delete_link', SETTINGS='settings'
+    MAIN='main', ADD_LINK='add_link', PLAY_LINK='play_link', DELETE_LINK='delete_link', SETTINGS='settings', EDIT_LINK='edit_link'
 )
 
 url_dispatcher = URL_Dispatcher()
@@ -40,7 +40,6 @@ def main_menu():
     kodi.create_item({'mode': MODES.ADD_LINK}, 'Add Link')
     kodi.create_item({'mode': MODES.SETTINGS}, 'URLResolver Settings')
     if os.path.exists(LINK_PATH):
-        menu_items = []
         with open(LINK_PATH) as f:
             for i, line in enumerate(f):
                 item = line.split('|')
@@ -51,38 +50,26 @@ def main_menu():
                 except:
                     label = item[0]
                 queries = {'mode': MODES.DELETE_LINK, 'index': i}
-                menu_items.append(('Delete Link', 'RunPlugin(%s)' % (kodi.get_plugin_url(queries))),)
+                menu_items = [('Delete Link', 'RunPlugin(%s)' % (kodi.get_plugin_url(queries))), ]
+                queries = {'mode': MODES.EDIT_LINK, 'index': i}
+                menu_items.append(('Edit Link', 'RunPlugin(%s)' % (kodi.get_plugin_url(queries))),)
                 kodi.create_item({'mode': MODES.PLAY_LINK, 'link': link}, label, is_folder=False, is_playable=True, menu_items=menu_items)
     
     kodi.end_of_directory()
 
 @url_dispatcher.register(MODES.ADD_LINK)
 def add_link():
-    keyboard = xbmc.Keyboard()
-    keyboard.setHeading('Enter Link')
-    keyboard.doModal()
-    if keyboard.isConfirmed():
-        link = keyboard.getText()
-        if not link:
-            return
-        
-        keyboard = xbmc.Keyboard()
-        keyboard.setHeading('Enter Name')
-        keyboard.doModal()
-        if keyboard.isConfirmed():
-            name = keyboard.getText()
-            if not os.path.exists(os.path.dirname(LINK_PATH)):
-                os.mkdir(os.path.dirname(os.path.dirname(LINK_PATH)))
-                
-            with open(LINK_PATH, 'a') as f:
-                if name:
-                    line = '%s|%s' % (link, name)
-                else:
-                    line = link
-                if not line.endswith('\n'):
-                    line += '\n'
-                f.write(line)
-    xbmc.executebuiltin("XBMC.Container.Refresh")
+    result = prompt_for_link()
+    if result:
+        if not os.path.exists(os.path.dirname(LINK_PATH)):
+            os.mkdir(os.path.dirname(os.path.dirname(LINK_PATH)))
+            
+        with open(LINK_PATH, 'a') as f:
+            line = '|'.join(result)
+            if not line.endswith('\n'):
+                line += '\n'
+            f.write(line)
+        xbmc.executebuiltin("XBMC.Container.Refresh")
 
 @url_dispatcher.register(MODES.SETTINGS)
 def urlresolver_settings():
@@ -103,6 +90,56 @@ def delete_link(index):
 
     xbmc.executebuiltin("XBMC.Container.Refresh")
 
+@url_dispatcher.register(MODES.EDIT_LINK, ['index'])
+def edit_link(index):
+    new_lines = []
+    with open(LINK_PATH) as f:
+        for i, line in enumerate(f):
+            if i == int(index):
+                item = line.split('|')
+                result = prompt_for_link(*item)
+                if result:
+                    line = '|'.join(result)
+                
+            new_lines.append(line)
+
+    with open(LINK_PATH, 'w') as f:
+        for line in new_lines:
+            if not line.endswith('\n'):
+                line += '\n'
+                
+            f.write(line)
+
+    xbmc.executebuiltin("XBMC.Container.Refresh")
+
+def prompt_for_link(old_link='', old_name=''):
+    if old_link.endswith('\n'): old_link = old_link[:-1]
+    if old_name.endswith('\n'): old_name = old_name[:-1]
+    keyboard = xbmc.Keyboard()
+    keyboard.setHeading('Edit Link')
+    keyboard.setDefault(old_link)
+    keyboard.doModal()
+    if keyboard.isConfirmed():
+        new_link = keyboard.getText()
+        if not new_link:
+            return
+
+        keyboard = xbmc.Keyboard()
+        keyboard.setHeading('Enter Name')
+        keyboard.setDefault(old_name)
+        keyboard.doModal()
+        if keyboard.isConfirmed():
+            new_name = keyboard.getText()
+        else:
+            return
+    else:
+        return
+    
+    if new_name:
+        return (new_link, new_name)
+    else:
+        return (new_link, )
+    
 @url_dispatcher.register(MODES.PLAY_LINK, ['link'])
 def play_link(link):
     log_utils.log('Playing Link: |%s|' % (link), log_utils.LOGDEBUG)
