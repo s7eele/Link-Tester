@@ -62,7 +62,7 @@ def add_link():
     result = prompt_for_link()
     if result:
         if not os.path.exists(os.path.dirname(LINK_PATH)):
-            os.mkdir(os.path.dirname(os.path.dirname(LINK_PATH)))
+            os.mkdir(os.path.dirname(LINK_PATH))
             
         with open(LINK_PATH, 'a') as f:
             line = '|'.join(result)
